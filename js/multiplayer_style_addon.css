@@ -1,0 +1,376 @@
+/* =============================================
+   FNAE - Estilos Multijugador
+   Agregar al final de style.css
+   ============================================= */
+
+/* Animación del indicador del otro jugador */
+@keyframes mpPulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
+        border-color: rgba(255, 0, 0, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(255, 0, 0, 0.8);
+        border-color: rgba(255, 0, 0, 1);
+    }
+}
+
+/* ---- Pantalla de selección modo ---- */
+#mode-select-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    font-family: 'Courier New', monospace;
+}
+
+#mode-select-overlay h2 {
+    font-size: 3vw;
+    color: #fff;
+    letter-spacing: 4px;
+    margin-bottom: 5vh;
+    text-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+    font-weight: bold;
+}
+
+.mode-btn {
+    width: 25vw;
+    min-width: 220px;
+    padding: 2vh 3vw;
+    margin: 1.5vh 0;
+    font-size: 1.6vw;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.mode-btn::before {
+    content: '> ';
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.mode-btn:hover::before {
+    opacity: 1;
+}
+
+.mode-btn:hover {
+    border-color: rgba(255, 0, 0, 0.7);
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+    transform: translateX(10px);
+}
+
+/* ---- Lobby multijugador ---- */
+#mp-lobby {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: url('assets/images/menubackground.png') center/cover;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    font-family: 'Courier New', monospace;
+}
+
+/* Capa oscura sobre el fondo */
+#mp-lobby::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 0;
+}
+
+#mp-lobby > * {
+    position: relative;
+    z-index: 1;
+}
+
+#mp-lobby h1 {
+    font-size: 3.5vw;
+    color: #fff;
+    letter-spacing: 5px;
+    margin-bottom: 4vh;
+    text-shadow:
+        0 0 10px rgba(255, 0, 0, 0.6),
+        0 0 20px rgba(255, 0, 0, 0.3);
+    font-weight: bold;
+}
+
+.mp-section {
+    margin: 1.5vh 0;
+    display: flex;
+    align-items: center;
+    gap: 1.5vw;
+}
+
+.mp-label {
+    font-size: 1.4vw;
+    color: #aaa;
+    letter-spacing: 2px;
+    min-width: 120px;
+    text-align: right;
+}
+
+/* Botones de jugador */
+.mp-player-btn {
+    width: 22vw;
+    min-width: 200px;
+    padding: 1.5vh 2vw;
+    font-size: 1.4vw;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    position: relative;
+}
+
+.mp-player-btn:hover {
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(40, 40, 40, 0.9);
+}
+
+.mp-player-btn.mp-taken {
+    border-color: rgba(255, 0, 0, 0.4);
+    color: #aaa;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.mp-player-btn.mp-mine {
+    border-color: rgba(0, 255, 0, 0.5);
+    color: #0f0;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+}
+
+.mp-player-btn .mp-player-name {
+    font-size: 1vw;
+    color: #888;
+    letter-spacing: 1px;
+    margin-top: 0.3vh;
+}
+
+/* Separador */
+.mp-divider {
+    width: 30vw;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 2vh 0;
+}
+
+/* Código de sala */
+.mp-code-display {
+    font-size: 3vw;
+    font-weight: bold;
+    color: #ff0000;
+    letter-spacing: 8px;
+    text-shadow:
+        0 0 10px #ff0000,
+        0 0 20px #ff0000;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(255, 0, 0, 0.4);
+    padding: 1vh 3vw;
+    margin: 0.5vh 0;
+}
+
+.mp-code-hint {
+    font-size: 1vw;
+    color: #666;
+    letter-spacing: 2px;
+    margin-bottom: 1vh;
+}
+
+/* Input código */
+.mp-code-input {
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 2vw;
+    font-weight: bold;
+    letter-spacing: 8px;
+    padding: 0.8vh 2vw;
+    text-align: center;
+    width: 22vw;
+    outline: none;
+    text-transform: uppercase;
+}
+
+.mp-code-input:focus {
+    border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Botones de acción */
+.mp-action-btn {
+    width: 22vw;
+    min-width: 200px;
+    padding: 1.5vh 2vw;
+    margin: 1vh 0;
+    font-size: 1.4vw;
+    font-weight: bold;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 3px;
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.mp-action-btn::before {
+    content: '> ';
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.mp-action-btn:hover::before { opacity: 1; }
+
+.mp-action-btn:hover {
+    border-color: rgba(255, 0, 0, 0.7);
+    transform: translateX(5px);
+    text-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
+}
+
+.mp-action-btn:disabled,
+.mp-action-btn.mp-disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.mp-action-btn.mp-green {
+    border-color: rgba(0, 255, 0, 0.5);
+    color: #0f0;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
+}
+
+.mp-action-btn.mp-green:hover {
+    border-color: rgba(0, 255, 0, 0.9);
+    text-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+}
+
+/* Status de sala */
+.mp-status {
+    font-size: 1.1vw;
+    color: #888;
+    letter-spacing: 2px;
+    margin-top: 1vh;
+    min-height: 2vh;
+    text-align: center;
+}
+
+.mp-status.mp-ok { color: #0f0; }
+.mp-status.mp-warn { color: #ff0; }
+.mp-status.mp-err { color: #f00; }
+
+/* Botón volver */
+.mp-back-btn {
+    font-size: 1.1vw;
+    color: #555;
+    letter-spacing: 2px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    margin-top: 2vh;
+    transition: color 0.2s;
+}
+
+.mp-back-btn:hover { color: #999; }
+
+/* Modal nombre */
+#mp-name-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    font-family: 'Courier New', monospace;
+}
+
+#mp-name-modal h3 {
+    font-size: 2vw;
+    color: #fff;
+    letter-spacing: 3px;
+    margin-bottom: 3vh;
+    text-shadow: 0 0 10px rgba(255,0,0,0.5);
+}
+
+.mp-name-input {
+    background: rgba(0,0,0,0.9);
+    border: 2px solid rgba(255,255,255,0.4);
+    border-bottom: 2px solid #ff0000;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-size: 1.8vw;
+    font-weight: bold;
+    letter-spacing: 4px;
+    padding: 1vh 2vw;
+    text-align: center;
+    width: 25vw;
+    outline: none;
+    margin-bottom: 3vh;
+}
+
+.mp-name-input:focus {
+    border-color: rgba(255,255,255,0.8);
+    border-bottom-color: #ff0000;
+}
+
+/* Badge de jugador en pantalla de juego */
+#mp-player-badge {
+    position: fixed;
+    top: 2vh;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    border: 1px solid rgba(255,0,0,0.3);
+    color: #888;
+    font-family: 'Courier New', monospace;
+    font-size: 1vw;
+    letter-spacing: 2px;
+    padding: 0.4vh 1.5vw;
+    z-index: 100;
+    pointer-events: none;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    #mp-lobby h1 { font-size: 7vw; }
+    .mp-label { font-size: 3vw; min-width: 80px; }
+    .mp-player-btn { font-size: 4vw; width: 70vw; }
+    .mp-action-btn { font-size: 4vw; width: 70vw; }
+    .mp-code-display { font-size: 6vw; letter-spacing: 5px; }
+    .mp-code-input { font-size: 5vw; width: 70vw; }
+    .mp-status { font-size: 3vw; }
+    .mode-btn { font-size: 4.5vw; width: 70vw; }
+    #mp-lobby h1 { font-size: 8vw; margin-bottom: 3vh; }
+    #mp-name-modal h3 { font-size: 5vw; }
+    .mp-name-input { font-size: 5vw; width: 80vw; }
+    #mp-player-badge { font-size: 2.5vw; }
+}
