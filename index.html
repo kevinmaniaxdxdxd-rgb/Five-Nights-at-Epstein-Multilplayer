@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Five Nights At Epstein's</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="multiplayer_style_addon.css">
 </head>
 
 <body>
@@ -31,17 +32,13 @@
         <div id="game-screen">
             <img id="current-scene" src="" alt="" style="display: none;">
 
-
             <div id="hotspots"></div>
 
-
             <div id="ui-overlay">
-
                 <div id="top-left-ui">
                     <div id="time-display"><span id="time-value">12 AM</span></div>
                     <div id="night-display">NIGHT <span id="night-value">1</span></div>
                 </div>
-
 
                 <div id="bottom-right-ui">
                     <div id="oxygen-display">
@@ -52,7 +49,6 @@
                 </div>
             </div>
         </div>
-
 
         <div id="camera-panel" class="hidden">
             <div id="current-cam-label">CAM 11</div>
@@ -68,17 +64,14 @@
             </video>
         </div>
 
-
         <div id="cutscene" class="hidden">
             <img src="assets/images/cutscene.png" alt="Cutscene">
             <div class="cutscene-hint">Click to continue...</div>
         </div>
 
-
         <div id="night-intro" class="hidden">
             <div id="night-intro-text">NIGHT 1</div>
         </div>
-
 
         <div id="main-menu">
             <img id="star-icon" class="hidden" src="assets/images/star.png" alt="Star">
@@ -94,9 +87,7 @@
             <div class="version">v1.2.2</div>
         </div>
 
-
         <button id="volume-btn" title="Volume Settings">SOUND SETTINGS</button>
-
 
         <div id="volume-panel" class="hidden">
             <h3>VOLUME SETTINGS</h3>
@@ -144,7 +135,6 @@
             <button id="close-volume-panel">CLOSE</button>
         </div>
 
-
         <div id="custom-night-menu" class="hidden">
             <h1>CUSTOM NIGHT</h1>
             <div class="custom-night-controls">
@@ -159,7 +149,6 @@
                     <div class="ai-value" id="epstein-value">0</div>
                 </div>
 
-
                 <div class="ai-control">
                     <div class="ai-name">TRUMP</div>
                     <div class="ai-slider-container">
@@ -169,7 +158,6 @@
                     </div>
                     <div class="ai-value" id="trump-value">0</div>
                 </div>
-
 
                 <div class="ai-control">
                     <div class="ai-name">HAWKING</div>
@@ -188,17 +176,13 @@
             </div>
         </div>
 
-
         <canvas id="static-canvas"></canvas>
-
 
         <audio id="menu-music" loop>
             <source src="assets/sounds/music3.ogg" type="audio/ogg">
         </audio>
 
-
         <div id="game-over" class="hidden">
-
             <video id="game-over-static" loop muted playsinline autoplay>
                 <source src="assets/vedio/202512191935.webm" type="video/webm">
             </video>
@@ -209,7 +193,6 @@
                 <button id="main-menu-btn">Main Menu</button>
             </div>
         </div>
-
 
         <div id="tutorial-overlay" class="hidden">
             <div id="tutorial-content">
@@ -227,6 +210,30 @@
         </div>
     </div>
 
+    <!-- ========== FIREBASE ========== -->
+    <!-- PASO 1: Pega aqui los scripts de Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+        // PASO 2: Reemplaza estos valores con TU firebaseConfig
+        // Los obtienes en console.firebase.google.com
+        const firebaseConfig = {
+            apiKey: "PEGA_TU_API_KEY_AQUI",
+            authDomain: "PEGA_TU_AUTH_DOMAIN_AQUI",
+            databaseURL: "PEGA_TU_DATABASE_URL_AQUI",
+            projectId: "PEGA_TU_PROJECT_ID_AQUI",
+            storageBucket: "PEGA_TU_STORAGE_BUCKET_AQUI",
+            messagingSenderId: "PEGA_TU_MESSAGING_ID_AQUI",
+            appId: "PEGA_TU_APP_ID_AQUI"
+        };
+        firebase.initializeApp(firebaseConfig);
+    </script>
+
+    <!-- ========== MULTIJUGADOR ========== -->
+    <script src="js/MultiplayerSystem.js"></script>
+    <script src="js/MultiplayerLobby.js"></script>
+
+    <!-- ========== JUEGO ORIGINAL ========== -->
     <script src="js/GameState.js"></script>
     <script src="js/AssetManager.js"></script>
     <script src="js/UIManager.js"></script>
