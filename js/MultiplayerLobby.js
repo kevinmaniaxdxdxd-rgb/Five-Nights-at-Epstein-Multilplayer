@@ -466,4 +466,4 @@ class MultiplayerLobby {
         document.getElementById('mp-player-badge')?.remove();
         document.getElementById('mp-other-cam-indicator')?.remove();
     }
-}MultiplayerLobby.js
+}
