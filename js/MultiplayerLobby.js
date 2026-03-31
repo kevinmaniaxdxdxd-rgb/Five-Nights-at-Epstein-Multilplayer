@@ -1,28 +1,25 @@
 // =============================================
 // FNAE - Controlador de Lobby Multijugador
-// Integrado con Game.js
 // =============================================
 
 class MultiplayerLobby {
     constructor(game) {
         this.game = game;
-        this.mp = null; // MultiplayerSystem instance
-        this.selectedPlayer = null; // 1 o 2
-        this.lobbyInterval = null; // polling Firebase
-
-        // Inyectar estilos del lobby si no están
-        this.injectStyles();
-    }
-
-    injectStyles() {
-        if (document.getElementById('mp-styles')) return;
-        // Los estilos vienen de multiplayer_style_addon.css (agregar al index.html)
+        this.mp = null;
+        this.selectedPlayer = null;
+        this.lobbyInterval = null;
+        this._pendingJoinCode = null;
+        this._launching = false;
     }
 
     // =============================================
     // 1. PANTALLA: Selección Modo (Solo / Multi)
     // =============================================
     showModeSelect() {
+        // Ocultar menú principal para que no se vean los personajes detrás
+        const mainMenu = document.getElementById('main-menu');
+        if (mainMenu) mainMenu.classList.add('hidden');
+
         const overlay = document.createElement('div');
         overlay.id = 'mode-select-overlay';
         overlay.innerHTML = `
@@ -47,6 +44,9 @@ class MultiplayerLobby {
     // 2. PANTALLA: Lobby multijugador
     // =============================================
     showMultiplayerLobby() {
+        const mainMenu = document.getElementById('main-menu');
+        if (mainMenu) mainMenu.classList.add('hidden');
+
         const lobby = document.createElement('div');
         lobby.id = 'mp-lobby';
         lobby.innerHTML = `
@@ -72,8 +72,8 @@ class MultiplayerLobby {
 
             <div class="mp-section" style="flex-direction: column; gap: 0.8vh;">
                 <div class="mp-code-hint">CÓDIGO DE TU SALA</div>
-                <div class="mp-code-display" id="mp-room-code">——————</div>
-                <div class="mp-code-hint">Comparte este código con tu amigo</div>
+                <div class="mp-code-display" id="mp-room-code">· · · · · ·</div>
+                <div class="mp-code-hint" id="mp-code-subhint">Selecciona JUGADOR 1 para crear sala</div>
             </div>
 
             <div class="mp-divider"></div>
@@ -92,23 +92,19 @@ class MultiplayerLobby {
         `;
         document.body.appendChild(lobby);
 
-        // Inicializar sistema multijugador
         this.mp = new MultiplayerSystem(this.game);
 
-        // Eventos botones jugador
         document.getElementById('mp-p1-btn').addEventListener('click', () => this.selectPlayer(1));
         document.getElementById('mp-p2-btn').addEventListener('click', () => this.selectPlayer(2));
-
-        // Empezar partida
         document.getElementById('mp-start-game-btn').addEventListener('click', () => this.tryStart());
-
-        // Unirse con código
         document.getElementById('mp-join-btn').addEventListener('click', () => this.joinWithCode());
-
-        // Volver
+        document.getElementById('mp-join-code').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.joinWithCode();
+        });
         document.getElementById('mp-back-btn').addEventListener('click', () => {
             this.cleanup();
-            this.game.showMainMenu();
+            const mainMenu = document.getElementById('main-menu');
+            if (mainMenu) mainMenu.classList.remove('hidden');
         });
     }
 
@@ -116,19 +112,22 @@ class MultiplayerLobby {
     // Seleccionar jugador (1 o 2)
     // =============================================
     selectPlayer(num) {
-        // Si ya hay alguien en ese slot, no permitir
-        const otherNum = num === 1 ? 2 : 1;
-
-        // Si ya elegiste ese slot
+        // Si ya soy ese jugador, permitir cambiar nombre
         if (this.selectedPlayer === num) {
             this.showNameModal(num);
             return;
         }
 
-        // Si el otro jugador ya tomó ese slot
+        // Si ya elegí otro jugador, bloquear
+        if (this.selectedPlayer !== null && this.selectedPlayer !== num) {
+            MultiplayerUI.showTempMessage('YA ERES JUGADOR ' + this.selectedPlayer, 2000);
+            return;
+        }
+
+        // Verificar si el otro jugador ya tomó ese slot
         const data = this.mp.sharedState;
         const key = `player${num}`;
-        if (data[key] && data[key].name && this.selectedPlayer !== num) {
+        if (data[key] && data[key].name) {
             MultiplayerUI.showTempMessage('ESE JUGADOR YA ESTÁ TOMADO', 2000);
             return;
         }
@@ -148,15 +147,21 @@ class MultiplayerLobby {
         modal.id = 'mp-name-modal';
         modal.innerHTML = `
             <h3>INGRESA TU NOMBRE · JUGADOR ${playerNum}</h3>
-            <input class="mp-name-input" id="mp-name-input-field" 
-                   placeholder="TU NOMBRE" maxlength="12" autocomplete="off">
+            <input class="mp-name-input" id="mp-name-input-field"
+                   placeholder="MÍN. 2 · MÁX. 12" maxlength="12" autocomplete="off">
+            <div id="mp-name-error" style="color:#f00;font-size:1vw;margin-bottom:1vh;min-height:1.8vh;letter-spacing:2px;font-family:'Courier New',monospace;text-align:center;"></div>
             <button class="mp-action-btn mp-green" id="mp-confirm-name">CONFIRMAR</button>
-            <button class="mp-back-btn" id="mp-cancel-name" style="margin-top: 1vh;">CANCELAR</button>
+            <button class="mp-back-btn" id="mp-cancel-name" style="margin-top:1vh;">CANCELAR</button>
         `;
         document.body.appendChild(modal);
 
         const input = document.getElementById('mp-name-input-field');
         input.focus();
+
+        // Solo letras y números
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^a-zA-Z0-9 áéíóúÁÉÍÓÚñÑ]/g, '');
+        });
 
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.confirmName(playerNum);
@@ -168,20 +173,24 @@ class MultiplayerLobby {
 
         document.getElementById('mp-cancel-name').addEventListener('click', () => {
             modal.remove();
-            this.selectedPlayer = null;
+            if (!this.mp.playerName) {
+                this.selectedPlayer = null;
+            }
         });
     }
 
     // =============================================
-    // Confirmar nombre y crear/actualizar sala
+    // Confirmar nombre
     // =============================================
     async confirmName(playerNum) {
         const input = document.getElementById('mp-name-input-field');
+        const errorEl = document.getElementById('mp-name-error');
         const name = input ? input.value.trim().toUpperCase() : '';
 
-        if (!name || name.length < 1) {
-            input.style.borderBottomColor = '#f00';
-            input.placeholder = 'ESCRIBE TU NOMBRE';
+        // Validar mínimo 2 caracteres
+        if (!name || name.length < 2) {
+            if (input) input.style.borderBottomColor = '#f00';
+            if (errorEl) errorEl.textContent = 'MÍNIMO 2 CARACTERES';
             return;
         }
 
@@ -191,34 +200,40 @@ class MultiplayerLobby {
 
         if (playerNum === 1 && !this.mp.isConnected) {
             // Jugador 1 = Host, crea la sala
-            status.textContent = 'CREANDO SALA...';
-            status.className = 'mp-status';
+            if (status) { status.textContent = 'CREANDO SALA...'; status.className = 'mp-status'; }
 
             const result = await this.mp.createRoom(name);
 
             if (result.success) {
-                document.getElementById('mp-room-code').textContent = result.roomCode;
-                this.updatePlayerButtons();
-                status.textContent = `SALA LISTA · ESPERANDO JUGADOR 2`;
-                status.className = 'mp-status mp-ok';
+                const codeEl = document.getElementById('mp-room-code');
+                if (codeEl) codeEl.textContent = result.roomCode;
 
-                // Escuchar actualizaciones de la sala
+                const hintEl = document.getElementById('mp-code-subhint');
+                if (hintEl) hintEl.textContent = 'Comparte este código con tu amigo';
+
+                this.updatePlayerButtons();
+                if (status) { status.textContent = 'SALA LISTA · ESPERANDO JUGADOR 2'; status.className = 'mp-status mp-ok'; }
                 this.startLobbyPolling();
             } else {
-                status.textContent = `ERROR: ${result.error}`;
-                status.className = 'mp-status mp-err';
+                if (status) { status.textContent = `ERROR: ${result.error}`; status.className = 'mp-status mp-err'; }
                 this.selectedPlayer = null;
             }
 
         } else if (playerNum === 2 && this.mp.isConnected) {
-            // Jugador 2 en sala ya creada, actualizar nombre
+            // Ya está en sala, solo actualiza nombre
             await this.mp.roomRef.child('player2').update({ name: name });
             this.mp.playerName = name;
             this.updatePlayerButtons();
 
+        } else if (this._pendingJoinCode) {
+            // Tenía código pendiente, unirse ahora
+            this.mp.playerName = name;
+            this.mp.playerNumber = playerNum;
+            const code = this._pendingJoinCode;
+            this._pendingJoinCode = null;
+            await this._doJoin(code);
+
         } else {
-            // Caso: Jugador 2 entra por código
-            // (manejado en joinWithCode)
             this.mp.playerName = name;
             this.mp.playerNumber = playerNum;
             this.updatePlayerButtons();
@@ -233,20 +248,27 @@ class MultiplayerLobby {
         const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
 
         if (!code || code.length !== 6) {
-            MultiplayerUI.showTempMessage('CÓDIGO INVÁLIDO', 2000);
+            MultiplayerUI.showTempMessage('CÓDIGO INVÁLIDO · 6 CARACTERES', 2000);
             return;
         }
 
-        if (!this.selectedPlayer) {
-            // Forzar seleccionar jugador 2 al unirse
-            this.selectedPlayer = 2;
+        // Ya está en esa sala
+        if (this.mp.roomCode === code) {
+            MultiplayerUI.showTempMessage('YA ESTÁS EN ESTA SALA', 2000);
+            return;
         }
 
-        // Pedir nombre si no tiene
+        // Ya conectado a otra sala
+        if (this.mp.isConnected) {
+            MultiplayerUI.showTempMessage('YA ESTÁS EN UNA SALA', 2000);
+            return;
+        }
+
+        if (!this.selectedPlayer) this.selectedPlayer = 2;
+
         if (!this.mp.playerName) {
-            this.showNameModal(2);
-            // Guardar código para después del nombre
             this._pendingJoinCode = code;
+            this.showNameModal(2);
             return;
         }
 
@@ -255,26 +277,28 @@ class MultiplayerLobby {
 
     async _doJoin(code) {
         const status = document.getElementById('mp-lobby-status');
-        status.textContent = 'UNIÉNDOSE A LA SALA...';
-        status.className = 'mp-status';
+        if (status) { status.textContent = 'UNIÉNDOSE A LA SALA...'; status.className = 'mp-status'; }
 
         const name = this.mp.playerName || 'JUGADOR2';
         const result = await this.mp.joinRoom(code, name);
 
         if (result.success) {
-            document.getElementById('mp-room-code').textContent = result.roomCode;
+            const codeEl = document.getElementById('mp-room-code');
+            if (codeEl) codeEl.textContent = result.roomCode;
+
+            const hintEl = document.getElementById('mp-code-subhint');
+            if (hintEl) hintEl.textContent = 'Conectado a sala de tu amigo';
+
             this.updatePlayerButtons();
-            status.textContent = `CONECTADO · SALA ${result.roomCode}`;
-            status.className = 'mp-status mp-ok';
+            if (status) { status.textContent = `CONECTADO · SALA ${result.roomCode}`; status.className = 'mp-status mp-ok'; }
             this.startLobbyPolling();
         } else {
-            status.textContent = `ERROR: ${result.error}`;
-            status.className = 'mp-status mp-err';
+            if (status) { status.textContent = `ERROR: ${result.error}`; status.className = 'mp-status mp-err'; }
         }
     }
 
     // =============================================
-    // Actualizar botones de jugadores en lobby
+    // Actualizar botones de jugadores
     // =============================================
     updatePlayerButtons() {
         const data = this.mp.sharedState;
@@ -292,11 +316,17 @@ class MultiplayerLobby {
             nameEl.textContent = pName || '— sin nombre —';
 
             btn.className = 'mp-player-btn';
-            if (num === myNum) btn.classList.add('mp-mine');
-            else if (pName) btn.classList.add('mp-taken');
+
+            if (num === myNum) {
+                btn.classList.add('mp-mine'); // Verde — soy yo
+                btn.title = 'Clic para cambiar tu nombre';
+            } else if (pName) {
+                btn.classList.add('mp-taken'); // Bloqueado — ya tomado
+                btn.title = 'Jugador ya registrado';
+            }
         });
 
-        // Habilitar "Empezar" si ambos tienen nombre
+        // Habilitar Empezar si ambos tienen nombre
         const p1Name = data.player1 ? data.player1.name : '';
         const p2Name = data.player2 ? data.player2.name : '';
         const startBtn = document.getElementById('mp-start-game-btn');
@@ -304,7 +334,6 @@ class MultiplayerLobby {
         if (startBtn) {
             if (p1Name && p2Name) {
                 startBtn.classList.remove('mp-disabled');
-                startBtn.classList.add('mp-green');
             } else {
                 startBtn.classList.add('mp-disabled');
             }
@@ -312,16 +341,13 @@ class MultiplayerLobby {
     }
 
     // =============================================
-    // Polling de sala (actualiza lobby UI)
+    // Polling de sala
     // =============================================
     startLobbyPolling() {
         if (this.lobbyInterval) return;
         this.lobbyInterval = setInterval(() => {
-            const data = this.mp.sharedState;
             this.updatePlayerButtons();
-
-            // Si el host inició la partida
-            if (data.status === 'playing') {
+            if (this.mp.sharedState.status === 'playing') {
                 this.launchGame();
             }
         }, 500);
@@ -335,49 +361,38 @@ class MultiplayerLobby {
         const p1 = data.player1 || {};
         const p2 = data.player2 || {};
 
+        if (!p1.name && !p2.name) {
+            MultiplayerUI.showTempMessage('CÁMBIATE EL NOMBRE', 2500);
+            return;
+        }
         if (!p1.name || !p2.name) {
-            if (!p1.name && !p2.name) {
-                MultiplayerUI.showTempMessage('CAMBIATE EL NOMBRE', 2500);
-            } else {
-                MultiplayerUI.showTempMessage('FALTA 1 JUGADOR', 2500);
-            }
+            MultiplayerUI.showTempMessage('FALTA 1 JUGADOR', 2500);
             return;
         }
 
-        // Todo listo, iniciar
-        if (this.mp.isHost) {
-            this.mp.startGame();
-        }
+        if (this.mp.isHost) this.mp.startGame();
         this.launchGame();
     }
 
     // =============================================
-    // Lanzar el juego real
+    // Lanzar el juego
     // =============================================
     launchGame() {
+        if (this._launching) return;
+        this._launching = true;
+
         clearInterval(this.lobbyInterval);
         this.lobbyInterval = null;
 
-        const lobby = document.getElementById('mp-lobby');
-        if (lobby) lobby.remove();
+        document.getElementById('mp-lobby')?.remove();
 
-        // Mostrar badge de jugador
         this.showPlayerBadge();
-
-        // Guardar referencia al sistema MP en el juego
         this.game.mp = this.mp;
         this.game.mpLobby = this;
-
-        // Parchear sistema de sonido compartido
         this.patchSoundSystem();
-
-        // Iniciar juego normal
         this.game._startSolo();
     }
 
-    // =============================================
-    // Badge en pantalla durante el juego
-    // =============================================
     showPlayerBadge() {
         let badge = document.getElementById('mp-player-badge');
         if (!badge) {
@@ -390,23 +405,15 @@ class MultiplayerLobby {
         badge.style.display = 'block';
     }
 
-    // =============================================
-    // Parchar sistema de sonido compartido
-    // =============================================
     patchSoundSystem() {
         if (!this.game.camera || !this.mp) return;
         const camera = this.game.camera;
         const mp = this.mp;
 
-        // Guardar función original
         const origPlayAmbient = camera.playAmbientSound.bind(camera);
-
-        // Reemplazar con versión que verifica Firebase
         camera.playAmbientSound = async function() {
-            // Verificar carga disponible en Firebase
             const allowed = await mp.useSoundCharge();
             if (!allowed) {
-                // Sin cargas — disparar fallo de cámara igual que original
                 camera.soundButtonUseCount = camera.maxSoundUses;
                 origPlayAmbient();
                 return;
@@ -414,7 +421,6 @@ class MultiplayerLobby {
             origPlayAmbient();
         };
 
-        // Parchar resetSoundButtonCount para que también resetee Firebase
         const origReset = camera.resetSoundButtonCount.bind(camera);
         camera.resetSoundButtonCount = function() {
             origReset();
@@ -422,9 +428,6 @@ class MultiplayerLobby {
         };
     }
 
-    // =============================================
-    // Parchar sistema de cámara para sincronizar
-    // =============================================
     patchCameraSystem() {
         if (!this.game.camera || !this.mp) return;
         const camera = this.game.camera;
@@ -449,12 +452,12 @@ class MultiplayerLobby {
         };
     }
 
-    // =============================================
-    // Limpiar al salir
-    // =============================================
     cleanup() {
         clearInterval(this.lobbyInterval);
         this.lobbyInterval = null;
+        this._launching = false;
+        this.selectedPlayer = null;
+        this._pendingJoinCode = null;
 
         if (this.mp) {
             this.mp.disconnect();
@@ -465,5 +468,6 @@ class MultiplayerLobby {
         document.getElementById('mode-select-overlay')?.remove();
         document.getElementById('mp-player-badge')?.remove();
         document.getElementById('mp-other-cam-indicator')?.remove();
+        document.getElementById('mp-name-modal')?.remove();
     }
 }
